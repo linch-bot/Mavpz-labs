@@ -5,7 +5,7 @@
 
 ## 2. AI Output (Перша версія)
 Модель згенерувала наступний код:
-
+```mermaid
 erDiagram
     Customer {
         int id PK
@@ -32,9 +32,11 @@ erDiagram
         varchar status
     }
 
+
     Customer ||--o{ Order : "places"
     Category ||--|| Product : "contains"
     Order ||--o{ Product : "includes"
+```
 
 
 
