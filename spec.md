@@ -35,6 +35,9 @@ The intent of this specification is to define the core data entities and their r
 
 ## Acceptance Criteria (for AI)
 - The model must be in Mermaid erDiagram format.
-- Do not use physical SQL data types; use conceptual ones.
-- Keys (PK/FK) must be clearly marked.
-- Strictly adhere to the relationship cardinality described above.
+- STRICT DATA TYPES: Use ONLY conceptual types like `UUID`, `String`, `Decimal`, `Timestamp`. DO NOT use SQL types (`int`, `varchar`).
+- KEYS: Primary keys must be marked as PK, foreign keys as FK.
+- STRICT CARDINALITY:
+  - Customer to Order: `||--o{`
+  - Category to Product: `||--o{`
+  - Order to Product: `}o--||`
