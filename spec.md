@@ -24,14 +24,13 @@ The intent of this specification is to define the core data entities and their r
 4. **Order**
    - id (UUID, PK)
    - customer_id (UUID, FK)
-   - product_id (UUID, FK)
    - order_date (Timestamp)
    - status (String)
 
 ## Relationships
 - One Customer can place many Orders.
 - One Category can contain many Products.
-- Each Order contains exactly one Product.
+- An Order can contain many Products, and a Product can be part of many Orders.
 
 ## Acceptance Criteria (for AI)
 - The model must be in Mermaid erDiagram format.
@@ -40,4 +39,4 @@ The intent of this specification is to define the core data entities and their r
 - STRICT CARDINALITY:
   - Customer to Order: `||--o{`
   - Category to Product: `||--o{`
-  - Order to Product: `}o--||`
+  - Order to Product: }o--o{

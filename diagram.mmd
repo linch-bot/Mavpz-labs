@@ -19,11 +19,10 @@ erDiagram
     Order {
         UUID id PK
         UUID customer_id FK
-        UUID product_id FK
         Timestamp order_date
         String status
     }
 
     Customer ||--o{ Order : "places"
     Category ||--o{ Product : "contains"
-    Product ||--o{ Order : "included_in"
+    Order }o--o{ Product : "contains"
