@@ -1,0 +1,28 @@
+erDiagram
+    Customer {
+        UUID id PK
+        String email
+        String full_name
+        Timestamp created_at
+    }
+    Product {
+        UUID id PK
+        String name
+        Decimal price
+        UUID category_id FK
+    }
+    Category {
+        UUID id PK
+        String name
+        String description
+    }
+    Order {
+        UUID id PK
+        UUID customer_id FK
+        Timestamp order_date
+        String status
+    }
+
+    Customer ||--o{ Order : "places"
+    Category ||--o{ Product : "contains"
+    Order }o--o{ Product : "contains"
