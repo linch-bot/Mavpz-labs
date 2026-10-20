@@ -53,3 +53,45 @@
   | Success        | Paid         | "Оплата успішна"        |
   | Declined       | Pending      | "Оплата не пройшла"     |
 ```
+
+## 4: Use Case Diagram та Traceability Matrix
+
+### Промпт 4 (із файлу spec.md)
+
+> Згенеруй Use Case Diagram (Mermaid) та Traceability Matrix (Markdown). Матриця має містити зв'язки багато-до-багатьох, а одна вимога має бути навмисно залишена непокритою.
+
+### Відповідь ШІ (Версія 1)
+
+**Use Case Diagram:**
+
+```mermaid
+flowchart LR
+    A_Customer[Customer]
+    A_PG[PaymentGateway]
+
+    UC_Checkout([Checkout Order])
+    UC_Payment([Process Payment])
+    UC_Discount([Apply Promo Code])
+    UC_Card([Pay by Card])
+    UC_Apple([Pay by Apple Pay])
+
+    A_Customer --- UC_Checkout
+    A_PG --- UC_Payment
+
+    UC_Checkout -. "<<extend>>" .-> UC_Payment
+    UC_Checkout -. "<<include>>" .-> UC_Discount
+
+    UC_Card -- "|>" --> UC_Payment
+    UC_Apple -- "|>" --> UC_Payment
+```
+
+**Traceability Matrix:**
+
+| ID Вимоги | Тип EARS     | Зв'язані User Stories | Покриття Gherkin       | Покриття Use Case        |
+| :-------- | :----------- | :-------------------- | :--------------------- | :----------------------- |
+| **REQ-1** | Ubiquitous   | US-1                  | Scenario 1             | UC_Checkout              |
+| **REQ-2** | Event-driven | US-1, US-2            | Scenario 1, Scenario 2 | UC_Payment               |
+| **REQ-3** | State-driven | -                     | -                      | -                        |
+| **REQ-4** | Optional     | US-1                  | Scenario 1             | UC_Discount, UC_Checkout |
+
+_(Примітка: REQ-3 навмисно залишено непокритою згідно з вимогами)._
