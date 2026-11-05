@@ -1,42 +1,24 @@
-# Data Specification (ER Model)
+# Specification (Lab 2: Requirements & Use Cases)
 
-## Intent
-The intent of this specification is to define the core data entities and their relationships for a basic online store. This model will serve as the foundation for the application's database architecture, ensuring that customer orders, products, and categories are properly tracked and normalized without using physical database schemas at this stage.
+## 1. Intent and Subject domain
 
-## Entities and Attributes
-1. **Customer**
-   - id (UUID, PK)
-   - email (String)
-   - full_name (String)
-   - created_at (Timestamp)
+Розширення моделі даних інтернет-магазину з Лабораторної роботи №1 (`Customer`, `Order`, `Product`, `Category`) функціональними та нефункціональними вимогами для процесу оформлення замовлення та проведення оплати.
 
-2. **Product**
-   - id (UUID, PK)
-   - name (String)
-   - price (Decimal)
-   - category_id (UUID, FK)
+## 2. Actors & Goals
 
-3. **Category**
-   - id (UUID, PK)
-   - name (String)
-   - description (String)
+- **Customer (Human):** Авторизований користувач із моделі даних Лаб 1. Головна ціль — оформити замовлення (Order) з обраними товарами (Product) та успішно його оплатити.
+- **PaymentGateway (External System):** Зовнішній платіжний сервіс. Головна ціль — прийняти запит на транзакцію, обробити платіж та повернути статус оплати (`Success` / `Declined`).
 
-4. **Order**
-   - id (UUID, PK)
-   - customer_id (UUID, FK)
-   - order_date (Timestamp)
-   - status (String)
+## 3. Поза обсягом (Out of Scope)
 
-## Relationships
-- One Customer can place many Orders.
-- One Category can contain many Products.
-- An Order can contain many Products, and a Product can be part of many Orders.
+- Повернення коштів (Refund) та скасування вже оплачених замовлень.
+- Збереження даних банківських карток на боці магазину (повністю делеговано `PaymentGateway`).
+- Оформлення замовлення без реєстрації (актор `Guest` заборонений моделлю даних Лаб 1).
 
-## Acceptance Criteria (for AI)
-- The model must be in Mermaid erDiagram format.
-- STRICT DATA TYPES: Use ONLY conceptual types like `UUID`, `String`, `Decimal`, `Timestamp`. DO NOT use SQL types (`int`, `varchar`).
-- KEYS: Primary keys must be marked as PK, foreign keys as FK.
-- STRICT CARDINALITY:
-  - Customer to Order: `||--o{`
-  - Category to Product: `||--o{`
-  - Order to Product: }o--o{
+## 3. Acceptance Criteria (Task for AI)
+
+1. **EARS-вимоги:** Мінімум 4 вимоги (шаблони: Ubiquitous, State-driven, Event-driven, Optional). Усі вимоги мають бути однозначними й тестованими (БЕЗ суб'єктивних прикметників на кшталт "швидко", "гарно" тощо).
+2. **Нефункціональні вимоги (NFR):** Окремий блок одразу після EARS (мінімум 5 вимог). Кожна вимога має містити однозначні числа й верхні межі: хто користується і з яких пристроїв/браузерів, пікове навантаження (RPS/користувачі), час відгуку (мс/с), стандарт безпеки, мова інтерфейсу та технології. NFR НЕ додавати на UC-діаграму та в матрицю трасування.
+3. **User Story у форматі Gherkin:** Окремий текстовий розділ «User Stories» НЕ створювати. Записати User Story безпосередньо в заголовку `Функціонал:` (Feature) та розписати 3 детальні Gherkin-сценарії (`Given/When/Then` + `Структура сценарію`) для прецеденту оплати (`Process Payment`). Використовувати ВИКЛЮЧНО акторів `Customer` та `PaymentGateway`.
+4. **Use Case Diagram (Mermaid):** Візуалізувати акторів, прецеденти та зв'язки. Оплата (`Process Payment`) має розширювати оформлення (`Checkout Order`) через `<<extend>>` (оскільки платіж може бути перерваний або відхилений), а обов'язковий розрахунок вартості замовлення (`Calculate Total`) — через `<<include>>`. Показати узагальнення способів оплати (`Pay by Card`, `Pay by Apple Pay`).
+5. **Матриця трасування:** Таблиця в Markdown `вимога-id (EARS) ↔ Gherkin-сценарій ↔ Use Case` зі зв'язками багато-до-багатьох. Рівно 1 EARS-вимогу (`REQ-3`) навмисно залишити непокритою.
