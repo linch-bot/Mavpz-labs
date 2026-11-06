@@ -42,3 +42,62 @@ sequenceDiagram
     OrderService-->>Customer: "Оплата успішно завершена"
     deactivate OrderService
 ```
+
+## 2: Сценарій 2 (Відмова банку) та Сценарій 3 (Переривання оплати / Таймаут)
+
+### Промпт 2 (на основі файлу spec.md)
+
+> Згенеруй окремі Sequence-діаграми у форматі Mermaid (`sequenceDiagram`) для Сценарію 2 (Неуспішна обробка платежу — статус `Declined`) та Сценарію 3 (Переривання оплати користувачем / Таймаут). У кожній діаграмі використай фрагмент `alt` або `opt` та лінії активації.
+
+### Відповідь ШІ (Версія 1)
+
+**Сценарій 2: Відмова банку**
+
+```mermaid
+sequenceDiagram
+    actor Customer
+    participant OrderService
+    participant Order
+    participant PaymentGateway
+
+    Customer->>OrderService: submitPayment(orderId)
+    activate OrderService
+    OrderService->>PaymentGateway: processPayment(orderId, amount)
+    activate PaymentGateway
+    PaymentGateway-->>OrderService: Declined
+    deactivate PaymentGateway
+
+    alt Статус Success
+        OrderService->>Order: updateStatus("Paid")
+        OrderService-->>Customer: "Оплата успішно завершена"
+        deactivate OrderService
+    else Статус Declined
+        OrderService->>Order: keepStatus("Pending")
+        OrderService-->>Customer: "Відмова банку. Спробуйте іншу картку"
+    end
+```
+
+**Сценарій 3: Переривання оплати користувачем (Таймаут)**
+
+```mermaid
+sequenceDiagram
+    actor Customer
+    participant OrderService
+    participant Order
+    participant PaymentGateway
+
+    Customer->>OrderService: просить оплатити замовлення
+    activate OrderService
+    OrderService->>PaymentGateway: відкриває сторінку оплати
+    activate PaymentGateway
+
+    opt Користувач передумав
+        Customer->>PaymentGateway: закриває вікно до завершення
+        PaymentGateway-->>OrderService: немає відповіді (таймаут)
+        deactivate PaymentGateway
+        OrderService->>Order: змінити статус на "Cancelled"
+    end
+
+    OrderService-->>Customer: замовлення скасовано
+    deactivate OrderService
+```
