@@ -107,3 +107,53 @@ sequenceDiagram
 
     deactivate OrderService
 ```
+
+---
+
+## 3. Сценарій 3: Переривання оплати користувачем / Таймаут (`Timeout -> Pending`)
+
+**Відповідність Лаб 2 (Gherkin + EARS + NFR):**
+- Поки транзакція обробляється, `Order.status` утримується як `"Pending"` (`REQ-3`).
+- Коли `Customer` закриває сторінку платіжного шлюзу до завершення операції, `PaymentGateway` не надсилає підтвердження транзакції (спрацьовує верхня межа очікування `3.0 с` згідно з `NFR-3`).
+- Статус `Order.status` залишається `"Pending"`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer
+    participant OrderService
+    participant Order
+    participant PaymentGateway
+
+    Customer->>OrderService: initiatePaymentSession(orderId: UUID, paymentMethod: String)
+    activate OrderService
+
+    OrderService->>Order: getOrderById(orderId: UUID)
+    activate Order
+    Order-->>OrderService: Order(id, customer_id, status="Pending")
+    deactivate Order
+
+    OrderService->>PaymentGateway: createPaymentSession(orderId: UUID, timeoutSec=3.0)
+    activate PaymentGateway
+    PaymentGateway-->>OrderService: SessionToken(sessionUrl)
+
+    Customer->>PaymentGateway: cancelPaymentSession()
+
+    alt Підтвердження надійшло до 3.0 с (NFR-3)
+        PaymentGateway-->>OrderService: PaymentWebhook(gateway_status="Success")
+        OrderService->>Order: updateOrderStatus(orderId: UUID, status="Paid")
+        activate Order
+        Order-->>OrderService: Order(id, status="Paid")
+        deactivate Order
+    else Клієнт закрив сторінку шлюзу / Таймаут > 3.0 с (REQ-3)
+        PaymentGateway-->>OrderService: TimeoutException(confirmed=false)
+        OrderService->>Order: updateOrderStatus(orderId: UUID, status="Pending")
+        activate Order
+        Order-->>OrderService: Order(id, status="Pending")
+        deactivate Order
+    end
+    deactivate PaymentGateway
+
+    OrderService-->>Customer: CheckoutResult(order_status="Pending", message="Оплату перервано. Замовлення очікує оплати")
+    deactivate OrderService
+```
