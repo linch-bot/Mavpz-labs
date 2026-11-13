@@ -1,97 +1,114 @@
-# prompts and generations (Лаб 2)
+# Prompts and Generations (Lab 3)
 
-## 1: EARS-вимоги
+## 1: Сценарій 1 — Успішна обробка платежу
 
-### Промпт 1 (із файлу spec.md)
+### Промпт 1 (на основі файлу spec.md)
 
-> Згенеруй EARS-вимоги: Мінімум 4 вимоги (шаблони: Ubiquitous, State-driven, Event-driven, Optional). Вимоги мають бути однозначними й тестованими.
-
-### Відповідь ШІ (Версія 1)
-
-- **REQ-1 (Ubiquitous):** Система ПОВИННА розраховувати загальну суму замовлення (Order) у національній валюті перед оплатою.
-- **REQ-2 (Event-driven):** КОЛИ користувач натискає кнопку "Оплатити", система ПОВИННА відправити запит на транзакцію до PaymentGateway.
-- **REQ-3 (State-driven):** ПОКИ замовлення очікує підтвердження від банку, система ПОВИННА швидко блокувати ці товари на складі.
-- **REQ-4 (Optional):** ДЕ увімкнено використання промокодів, система ПОВИННА дозволяти застосувати знижку до замовлення.
-
-## 2: User Stories
-
-### Промпт 2 (із файлу spec.md)
-
-> Згенеруй User Stories: Мінімум 2 історії з критеріями прийняття(Acceptance Criteria).
+> На основі файлу `spec.md` побудуй детальну Sequence-діаграму у форматі Mermaid (`sequenceDiagram`) для Сценарію 1 (Успішна обробка платежу). Покажи взаємодію між учасниками для розрахунку суми замовлення та проведення оплати через платіжний шлюз. Обов'язково використай комбінований фрагмент (`loop` або `opt`) та блоки активації (`activate`/`deactivate`).
 
 ### Відповідь ШІ (Версія 1)
-
-- **US-1 (Успішна оплата):** Як Customer, я хочу безпечно сплатити своє замовлення, щоб воно перейшло в обробку.
-  - _Acceptance Criteria:_ Після отримання статусу "Success" від PaymentGateway, статус замовлення (Order) в базі змінюється на "Paid".
-- **US-2 (Відхилення платежу):** Як Неавторизований користувач (Guest), я хочу бачити чітке повідомлення про помилку при відмові банку, щоб спробувати інший спосіб оплати.
-  - _Acceptance Criteria:_ Система показує повідомлення про помилку транзакції, а статус Order залишається "Pending".
-
-## 3: Gherkin-сценарії
-
-### Промпт 3 (із файлу spec.md)
-
-> Згенеруй Gherkin-сценарії: Мінімум 2 сценарії (Given/When/Then) для успішної оплати та обробки відмови банку. Використай синтаксис Gherkin (українською) зі Структурою сценарію.
-
-### Відповідь ШІ (Версія 1)
-
-```gherkin
-# language: uk
-@checkout
-Функціонал: Обробка оплати замовлення
-
-Передумова:
-  Припустимо Customer сформував замовлення (Order) і перейшов до оплати
-
-Структура сценарію: Реакція системи на відповідь платіжного шлюзу
-  Коли PaymentGateway повертає статус <gateway_status>
-  Тоді система встановлює статус Order як <order_status>
-  І відправляє клієнту повідомлення <message>
-  А також Менеджер (Manager) отримує копію квитанції
-
-Приклади:
-  | gateway_status | order_status | message                 |
-  | Success        | Paid         | "Оплата успішна"        |
-  | Declined       | Pending      | "Оплата не пройшла"     |
-```
-
-## 4: Use Case Diagram та Traceability Matrix
-
-### Промпт 4 (із файлу spec.md)
-
-> Згенеруй Use Case Diagram (Mermaid) та Traceability Matrix (Markdown). Матриця має містити зв'язки багато-до-багатьох, а одна вимога має бути навмисно залишена непокритою.
-
-### Відповідь ШІ (Версія 1)
-
-**Use Case Diagram:**
 
 ```mermaid
-flowchart LR
-    A_Customer[Customer]
-    A_PG[PaymentGateway]
+sequenceDiagram
+    actor Customer
+    participant ShoppingCart
+    participant OrderService
+    participant PaymentTransactionDB
+    participant PaymentGateway
 
-    UC_Checkout([Checkout Order])
-    UC_Payment([Process Payment])
-    UC_Discount([Apply Promo Code])
-    UC_Card([Pay by Card])
-    UC_Apple([Pay by Apple Pay])
+    Customer->>OrderService: checkout()
+    activate OrderService
+    OrderService->>ShoppingCart: getCartItems()
+    activate ShoppingCart
+    ShoppingCart-->>OrderService: itemsList
+    deactivate ShoppingCart
 
-    A_Customer --- UC_Checkout
-    A_PG --- UC_Payment
+    loop Для кожного товару в кошику
+        OrderService->>OrderService: sumPrice(item)
+    end
 
-    UC_Checkout -. "<<extend>>" .-> UC_Payment
-    UC_Checkout -. "<<include>>" .-> UC_Discount
+    OrderService->>PaymentGateway: pay(totalAmount)
+    activate PaymentGateway
+    PaymentGateway-->>OrderService: Success
+    deactivate PaymentGateway
 
-    UC_Card -- "|>" --> UC_Payment
-    UC_Apple -- "|>" --> UC_Payment
+    opt Статус транзакції Success
+        OrderService->>PaymentTransactionDB: saveTransaction(orderId, "Success")
+        activate PaymentTransactionDB
+        PaymentTransactionDB-->>OrderService: saved
+        deactivate PaymentTransactionDB
+    end
+
+    OrderService-->>Customer: "Оплата успішно завершена"
+    deactivate OrderService
 ```
 
-**Traceability Matrix:**
+## 2: Сценарій 2 (Відмова банку) та Сценарій 3 (Переривання оплати / Таймаут)
 
-| ID Вимоги | Тип EARS     | Зв'язані User Stories | Покриття Gherkin       | Покриття Use Case        |
-| :-------- | :----------- | :-------------------- | :--------------------- | :----------------------- |
-| **REQ-1** | Ubiquitous   | US-1                  | Scenario 1             | UC_Checkout              |
-| **REQ-2** | Event-driven | US-1, US-2            | Scenario 1, Scenario 2 | UC_Payment               |
-| **REQ-3** | State-driven | -                     | -                      | -                        |
-| **REQ-4** | Optional     | US-1                  | Scenario 1             | UC_Discount, UC_Checkout |
+### Промпт 2 (на основі файлу spec.md)
 
-_(Примітка: REQ-3 навмисно залишено непокритою згідно з вимогами)._
+> Згенеруй окремі Sequence-діаграми у форматі Mermaid (`sequenceDiagram`) для Сценарію 2 (Неуспішна обробка платежу — статус `Declined`) та Сценарію 3 (Переривання оплати користувачем / Таймаут). У кожній діаграмі використай фрагмент `alt` або `opt` та лінії активації.
+
+### Відповідь ШІ (Версія 1)
+
+**Сценарій 2: Відмова банку**
+
+```mermaid
+sequenceDiagram
+    actor Customer
+    participant OrderService
+    participant Order
+    participant PaymentGateway
+
+    Customer->>OrderService: submitPayment(orderId)
+    activate OrderService
+    OrderService->>PaymentGateway: processPayment(orderId, amount)
+    activate PaymentGateway
+    PaymentGateway-->>OrderService: Declined
+    deactivate PaymentGateway
+
+    alt Статус Success
+        OrderService->>Order: updateStatus("Paid")
+        OrderService-->>Customer: "Оплата успішно завершена"
+        deactivate OrderService
+    else Статус Declined
+        OrderService->>Order: keepStatus("Pending")
+        OrderService-->>Customer: "Відмова банку. Спробуйте іншу картку"
+    end
+```
+
+**Сценарій 3: Переривання оплати користувачем (Таймаут)**
+
+```mermaid
+sequenceDiagram
+    actor Customer
+    participant OrderService
+    participant Order
+    participant PaymentGateway
+
+    Customer->>OrderService: просить оплатити замовлення
+    activate OrderService
+    OrderService->>PaymentGateway: відкриває сторінку оплати
+    activate PaymentGateway
+
+    opt Користувач передумав
+        Customer->>PaymentGateway: закриває вікно до завершення
+        PaymentGateway-->>OrderService: немає відповіді (таймаут)
+        deactivate PaymentGateway
+        OrderService->>Order: змінити статус на "Cancelled"
+    end
+
+    OrderService-->>Customer: замовлення скасовано
+    deactivate OrderService
+```
+
+## 3: Аудит та уточнювальний промпт після оновлення spec.md
+
+### Фідбек до ШІ та Промпт 3 (на основі оновленого spec.md)
+
+> У попередніх генераціях виявлено 3 критичні помилки проти `spec.md`, ER-моделі Лаб 1 та Gherkin-сценаріїв Лаб 2:
+> 1. У Сценарії 1 ти вигадав учасників `ShoppingCart` та `PaymentTransactionDB`, яких немає в ER-моделі Лаб 1. Використовуй лише `Customer`, `OrderService`, `Product`, `Order` та `PaymentGateway`.
+> 2. У Сценарії 2 ти викликав `deactivate OrderService` всередині першої гілки блоку `alt`, через що лінія життя обірвалася до завершення умовного фрагмента. Винеси `deactivate OrderService` після `end`.
+> 3. У Сценарії 3 ти використав побутовий текст замість викликів методів і встановив статус `"Cancelled"`, хоча за Gherkin-сценарієм із Лаб 2 та `REQ-3` при перериванні оплати або таймауті (`3.0 с`, `NFR-3`) статус `Order.status` має залишатися `"Pending"`.
+>
+> Перегенеруй усі 3 Sequence-діаграми для файлу `interactions.md` строго за оновленим `spec.md`.
