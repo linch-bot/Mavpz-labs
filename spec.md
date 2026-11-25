@@ -1,28 +1,25 @@
-# Specification (Lab 4: Process & Activity Diagram)
+# Specification (Lab 5: Architecture & Component Diagram)
 
-## 1. Намір та обраний прецедент (Intent & Selected Use Case)
+## 1. Намір та архітектурний підхід (Intent & Architecture Style)
 
-Моделювання повного бізнес-процесу оформлення та оплати замовлення для прецеденту **`Checkout Order`** (із обов'язковим розрахунком суми **`Calculate Total`** через `<<include>>` та розширенням **`Process Payment`** через `<<extend>>` із Лаб 2), що об'єднує всі 3 Gherkin-сценарії (`Success`, `Declined`, `Timeout`) на одній діаграмі процесу.
+Побудова UML Component Diagram для інтернет-магазину **`Online Store System`** у підході **Варіант A (горизонтальні шари)**: `Presentation → API → Services → Data access → Store DB`, що об'єднує всі моделі попередніх етапів (ER-модель Лаб 1, вимоги та прецеденти Лаб 2, Sequence Лаб 3, Activity Лаб 4).
 
-## 2. Вибір форми (Activity Diagram)
+## 2. Модулі та шари системи (Internal Modules)
 
-Обрано **Activity-діаграму** у форматі Mermaid `flowchart TD` зі swimlanes замість машини станів (`stateDiagram-v2`, яка приховує ролі виконавців та паралельні потоки між учасниками) та замість BPMN 2.0 XML (що потребує окремих XML-пулів і зовнішнього редактора замість нативного рендеру GitHub, як закріплено в `ADR-001`).
+- **`Presentation` (браузер: Chrome 90+ / Safari 14+, `UK-ua`):** `Catalog Page` (перегляд товарів за категоріями) та `Checkout Page` (оформлення замовлення й ініціація оплати).
+- **`Store Backend` (серверний застосунок, до 500 RPS):**
+  - **API (controllers):** `Router`, `AuthMiddleware` (перевірка авторизованого `Customer`, без `Guest`), `CatalogController`, `OrderController`, `PaymentWebhookController`.
+  - **Services (business logic):** `CustomerService`, `CatalogService`, `OrderService` (реалізує `Calculate Total` та `Process Payment`).
+  - **Data access (repositories):** `CustomerRepository`, `CategoryRepository`, `ProductRepository`, `OrderRepository` (відповідають 4 сутностям Лаб 1).
+- **`Store DB`:** окремий процес БД (одна спільна схема для `Customer`, `Category`, `Product`, `Order`).
 
-## 3. Ролі (Swimlanes), кроки, розгалуження та повідомлення
+## 3. Зовнішні інтеграції (External Systems)
 
-- **`Customer`:** Ініціює оформлення замовлення (`Checkout Order`), обирає спосіб оплати (`Pay by Card` / `Pay by Apple Pay`), підтверджує оплату або закриває сторінку платіжного шлюзу, у разі відмови банку вирішує, чи повторити спробу іншою карткою, і отримує фінальне сповіщення.
-- **`OrderService`:** Розраховує загальну суму замовлення на основі `Product.price` (`REQ-1`), утримує `Order.status = "Pending"` (`REQ-3`), надсилає повідомлення на авторизацію транзакції (`REQ-2`), обробляє відповідь шлюзу чи переривання, а при успіху паралельно оновлює `Order.status` на `"Paid"` (`REQ-4`) та сповіщає клієнта.
-- **`PaymentGateway`:** Відкриває платіжну сесію з лімітом очікування `3.0 с` (`NFR-3`), проводить транзакцію за протоколом `TLS 1.3` (`NFR-4`) і повертає результат (`Success` / `Declined`) або фіксує відсутність підтвердження.
+- **`PaymentGateway` (`<<external>>`):** надає `Payments API` (шифрування `TLS 1.3`, таймаут `≤ 3.0 с`) для авторизації транзакцій і містить `Payment Page` (Card / Apple Pay), на яку перенаправляється клієнт.
 
-## 4. Поза обсягом (Out of Scope)
+## 4. Acceptance Criteria (Task for AI)
 
-- Виділення бази даних (`OrderDB`, `ProductDB`) в окрему доріжку (swimlane) бізнес-процесу — сутності `Order` та `Product` із Лаб 1 дозволено зображати лише як вузли даних (object nodes).
-- Використання другої нотації «про запас» (BPMN або `stateDiagram-v2` поруч із Activity-діаграмою) чи додавання позамодельних сервісів (`CRM`, `EmailService`, `Warehouse`).
-
-## 5. Acceptance Criteria (Task for AI)
-
-1. **Єдина діаграма для всього UC:** Побудувати одну Activity-діаграму в Mermaid `flowchart TD`, що покриває всі 3 сценарії Gherkin із Лаб 2 (`Success`, `Declined`, `Timeout`) як окремі шляхи від початку до кінця.
-2. **Дії-дієслова та учасники:** Усі кроки процесу ПОВИННІ формулюватися дієсловами у неозначеній формі («Розрахувати суму», «Змінити статус замовлення на Paid»); ЗАБОРОНЕНО писати стани («Pending», «Paid») як дії або додавати БД як окрему доріжку.
-3. **Парність `fork` та `join` (`allSettled`):** Усі паралельні гілки після `fork` ПОВИННІ сходитися у вузлі синхронізації `join` — ЗАБОРОНЕНО робити достроковий вихід (`flow final` / окремий `stop`) всередині паралельної гілки.
-4. **Повідомлення та реакція на таймаут `3.0 с`:** Для кожного надсилання повідомлення (`send signal`) явно показати відправника, отримувача та реакцію на відповідь АБО її відсутність (коли клієнт закриває сторінку шлюзу або спливає `> 3.0 с` за `NFR-3`, і замовлення утримує `Order.status = "Pending"`).
-5. **Вичерпні умови та узгодженість:** Умови в усіх розгалуженнях (`decision`) ПОВИННІ бути вичерпними й взаємно виключними у квадратних дужках `[ ]`, із повною узгодженістю до ER-моделі (Лаб 1), UC/Gherkin (Лаб 2) та Sequence-діаграм (Лаб 3).
+1. **Компонентна модель у Mermaid:** Побудувати UML Component Diagram у Mermaid для `Online Store System` у стилі горизонтальних шарів.
+2. **Повнота елементів:** Відобразити всі шари (UI, API, Services, Data access, DB), зовнішню інтеграцію `PaymentGateway`, інтерфейси та залежності між компонентами.
+3. **Наскрізна узгодженість:** Кожен компонент і зв'язок має трасуватися до ER-моделі (Лаб 1), EARS/NFR/UC (Лаб 2), Sequence-діаграм (Лаб 3) та Activity-діаграми (Лаб 4).
+4. **Охайність розкладки:** Розташувати шари зверху донизу з мінімальними перетинами зв'язків.
