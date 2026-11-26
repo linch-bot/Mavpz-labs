@@ -1,68 +1,87 @@
-# Prompts and Generations (Lab 4)
+# Prompts and Generations (Lab 5)
 
-## 1: Перша генерація Activity-діаграми бізнес-процесу оплати
+## 1: Перша генерація UML Component Diagram (Варіант A)
 
 ### Промпт 1 (на основі файлу spec.md)
 
-> На основі файлу `spec.md` побудуй єдину Activity-діаграму у форматі Mermaid (`flowchart TD` зі swimlanes) для бізнес-процесу оформлення та оплати замовлення (`Checkout Order` + `Calculate Total` + `Process Payment`). Покажи початок і кінець, розгалуження, цикл повторної спроби оплати, паралельну гілку (`fork`/`join`) та обмін повідомленнями з `PaymentGateway`.
+> На основі файлу `spec.md` побудуй UML Component Diagram у синтаксисі Mermaid для інтернет-магазину `Online Store System` у стилі горизонтальних шарів. Покажи всі внутрішні шари (UI, API, Services, Data access, DB), зовнішні інтеграції, інтерфейси та залежності між компонентами.
 
 ### Відповідь ШІ (Версія 1)
 
 ```mermaid
-flowchart TD
-    subgraph Customer ["Актор: Customer"]
-        Start((●)) --> A_Init["Замовлення сформовано"]
-        A_Select["Обрати спосіб оплати"]
-        A_Retry{"Повторити оплату?"}
+flowchart TB
+    Customer((Customer))
+
+    subgraph System ["Online Store System (Межа системи)"]
+        direction TB
+
+        subgraph Presentation ["Presentation"]
+            CatalogPage["Catalog Page"]
+            CheckoutPage["Checkout Page"]
+        end
+
+        I_REST(("REST /api"))
+
+        subgraph API ["API (controllers)"]
+            AuthMW["AuthMiddleware"]
+            CatalogC["CatalogController"]
+            OrderC["OrderController"]
+            WebhookC["PaymentWebhookController"]
+        end
+
+        I_OrderSvc(("IOrderService"))
+
+        subgraph Services ["Services"]
+            CustomerS["CustomerService"]
+            CatalogS["CatalogService"]
+            OrderS["OrderService"]
+        end
+
+        I_OrderRepo(("IOrderRepository"))
+
+        subgraph DAL ["Data access"]
+            CustomerR["CustomerRepository"]
+            CategoryR["CategoryRepository"]
+            ProductR["ProductRepository"]
+            OrderR["OrderRepository"]
+            CartR["CartRepository"]
+        end
+
+        subgraph ExtInside ["Платіжний шлюз"]
+            PaymentGateway["PaymentGateway"]
+            PaymentPage["Payment Page"]
+        end
+
+        StoreDB[("Store DB")]
     end
 
-    subgraph OrderService ["Система: OrderService"]
-        A_Calc["Розрахувати суму"]
-        S_Pay[">Надіслати запит на оплату"]
-        D_Res{"Статус оплати?"}
-        Fork["=== FORK ==="]
-        A_Notify[">Надіслати підтвердження успіху"]
-        Join["=== JOIN ==="]
-        End1(((●)))
-        End2(((●)))
-    end
+    EmailProvider["«external» Email / SMS Provider"]
+    I_Wh(("Payment Webhook"))
 
-    subgraph OrderDB ["База даних: OrderDB"]
-        A_Pending["Pending"]
-        A_Paid["Paid"]
-    end
+    Customer --> CatalogPage
+    Customer --> CheckoutPage
+    Customer --> PaymentPage
 
-    subgraph PaymentGateway ["Зовнішня система: PaymentGateway"]
-        A_Proc["Обробити платіж"]
-    end
+    CatalogPage --> I_REST
+    CheckoutPage --> I_REST
+    CatalogC --- I_REST
+    OrderC --- I_REST
 
-    A_Init --> A_Calc
-    A_Calc --> A_Pending
-    A_Pending --> A_Select
-    A_Select --> S_Pay
-    S_Pay -. "authorizeTransaction" .-> A_Proc
-    A_Proc -. "Success / Declined" .-> D_Res
+    OrderC --> I_OrderSvc
+    OrderS --- I_OrderSvc
 
-    D_Res -- "[Success]" --> Fork
-    Fork --> A_Paid
-    A_Paid --> Join
-    Fork --> A_Notify
-    A_Notify --> End1
+    OrderS --> I_OrderRepo
+    OrderR --- I_OrderRepo
+    OrderR -. "upward check" .-> OrderS
 
-    Join --> End2
+    OrderS -.-> CartR
+    OrderS -.-> EmailProvider
 
-    D_Res -- "[Declined]" --> A_Retry
-    A_Retry -- "[так]" --> A_Select
-    A_Retry -- "[ні]" --> End2
+    PaymentGateway --- I_Wh
+    WebhookC --> I_Wh
+
+    CustomerR -.-> StoreDB
+    CategoryR -.-> StoreDB
+    ProductR -.-> StoreDB
+    OrderR -.-> StoreDB
 ```
-
-## 2: Аудит версії 1 та уточнювальний промпт після оновлення spec.md
-
-### Фідбек до ШІ та Промпт 2 (на основі оновленого spec.md)
-
-> У версії 1 діаграми виявлено 3 критичні порушення правил нотації та оновленого `spec.md`:
-> 1. **БД як окремий учасник процесу та стани замість дієслів:** Ти додав окремий swimlane `OrderDB` (що заборонено правилами діаграми діяльності та `spec.md`), а у прямокутниках дій написав стани `"Pending"` і `"Paid"` замість дієслів. Прибери `OrderDB` як доріжку, покажи `Product` та `Order` як вузли даних (`Data Object`), а всі кроки сформулюй дієсловами («Розрахувати загальну суму замовлення», «Змінити статус замовлення на Paid»).
-> 2. **Розірваний `fork` без `join`:** Після `fork` гілка надсилання сповіщення клієнту завершилася власним кінцем `End1` замість повернення у вузол синхронізації `join`. Усі гілки `fork` мають сходитися в `join` (`allSettled`) перед завершенням процесу.
-> 3. **Пропущено реакцію на відсутність відповіді / таймаут `3.0 с`:** Після надсилання запиту до `PaymentGateway` показано лише `Success` та `Declined`, але повністю пропущено Сценарій 3 із Лаб 2–3 (коли клієнт закриває сторінку шлюзу до завершення або спливає `> 3.0 с` за `NFR-3`, `PaymentGateway` не надсилає підтвердження, а `OrderService` утримує `Order.status = "Pending"` і повідомляє клієнта).
->
-> Перегенеруй єдину Activity-діаграму для файлу `process.md` строго за оновленим `spec.md`, додай вузли даних `Product` і `Order`, вичерпні умови у `[ ]` та явні повідомлення між учасниками.
