@@ -15,11 +15,16 @@
 
 ## 3. Зовнішні інтеграції (External Systems)
 
-- **`PaymentGateway` (`<<external>>`):** надає `Payments API` (шифрування `TLS 1.3`, таймаут `≤ 3.0 с`) для авторизації транзакцій і містить `Payment Page` (Card / Apple Pay), на яку перенаправляється клієнт.
+- **`PaymentGateway` (`<<external>>`):** єдина зовнішня система поза межею `Online Store System`; надає `Payments API` (шифрування `TLS 1.3`, таймаут `≤ 3.0 с`) та містить `Payment Page` (Card / Apple Pay), на яку перенаправляється клієнт.
 
-## 4. Acceptance Criteria (Task for AI)
+## 4. Поза обсягом (Out of Scope)
 
-1. **Компонентна модель у Mermaid:** Побудувати UML Component Diagram у Mermaid для `Online Store System` у стилі горизонтальних шарів.
+- Позамодельні зовнішні сервіси (`Email / SMS Provider`, `Identity Provider`, `Delivery API`), яких немає в Лаб 2–4.
+- Позамодельні репозиторії чи таблиці БД (`CartRepository`, `PaymentTransactionRepository`, `InvoiceRepository`), що суперечать ER-моделі Лаб 1.
+
+## 5. Acceptance Criteria (Task for AI)
+
+1. **Межа системи та зовнішні інтеграції:** Побудувати UML Component Diagram у Mermaid для `Online Store System` (Варіант A). `<<external>> PaymentGateway` (разом із `Payment Page`) ПОВИНЕН бути розташований суворо поза межею системи; заборонено додавати компоненти з розділу «Поза обсягом».
 2. **Повнота елементів:** Відобразити всі шари (UI, API, Services, Data access, DB), зовнішню інтеграцію `PaymentGateway`, інтерфейси та залежності між компонентами.
 3. **Наскрізна узгодженість:** Кожен компонент і зв'язок має трасуватися до ER-моделі (Лаб 1), EARS/NFR/UC (Лаб 2), Sequence-діаграм (Лаб 3) та Activity-діаграми (Лаб 4).
 4. **Охайність розкладки:** Розташувати шари зверху донизу з мінімальними перетинами зв'язків.
